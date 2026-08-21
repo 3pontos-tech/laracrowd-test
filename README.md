@@ -1,58 +1,95 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Investment Platform
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Plataforma de investimentos que conecta empresas em captação a investidores. Suporta duas modalidades de oferta sobre o mesmo núcleo financeiro: participação em investimento coletivo e nota comercial.
 
-## About Laravel
+## Stack
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+| Camada | Tecnologia |
+| --- | --- |
+| Backend | PHP 8.4, Laravel 13 |
+| Banco de dados | PostgreSQL |
+| Organização | Monólito modular (`internachi/modular`) |
+| Dinheiro | `brick/math` + value object próprio, escala de 8 casas |
+| Testes | Pest |
+| Análise estática | PHPStan (level 1) |
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
-
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
-
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Subindo o ambiente
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+cp .env.example .env
+composer install
+php artisan key:generate
+docker compose up -d              # PostgreSQL na porta 5434
+php artisan migrate --seed        # schema + dataset de demonstração
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Rodando os testes:
 
-## Contributing
+```bash
+./vendor/bin/pest
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+> A suíte usa SQLite em memória (`phpunit.xml`), enquanto o ambiente de trabalho usa PostgreSQL.
 
-## Code of Conduct
+## Domínio
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### Ciclo de vida do aporte
 
-## Security Vulnerabilities
+Um **aporte** (`Placement`) representa o investimento de uma pessoa em uma oferta. Ele atravessa a máquina de estados abaixo, e carrega dois campos de estado que evoluem em paralelo: `status` (a etapa do ciclo) e `process` (a situação da reserva).
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```
+Draft ──▶ Contract ──▶ Payment ──▶ Active ──▶ Finished
+  │           │           │           │
+  └───────────┴───────────┴───────────┴──▶ Cancelled
 
-## License
+Active ──▶ Withdrawing ──▶ WithdrawalCompleted
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Cada etapa é uma classe em `app-modules/placements/src/Actions/StateMachine/`, resolvida por `PlacementStatus::getAction()`. A transição acontece em `AbstractPlacementStep::handle()`.
+
+### Carteira e movimentações
+
+Todo aporte ativo tem uma **carteira** (`Wallet`), que mantém cinco valores: saldo, rendimentos acumulados, rendimentos disponíveis, total investido e total resgatado.
+
+As movimentações financeiras são registradas em partidas dobradas:
+
+- `ledgers` — agrupa uma operação e carrega o estado dela
+- `ledger_entries` — as pernas de débito e crédito, por carteira
+
+### Rendimento periódico
+
+Cada oferta tem uma taxa por período (`startup_offer_rates`). O cálculo e o crédito do rendimento de uma carteira vivem em `PlacementMonthlyRentabilityAction`, que aceita execução em modo simulação (`dryRun`) antes da aplicação real. Quando o aporte tem resgate automático habilitado, a rotina encadeia a solicitação e a aprovação do resgate.
+
+### Resgates
+
+O fluxo é de duas etapas: `RequestWithdrawalAction` registra a solicitação, `ApproveWithdrawalAction` a efetiva, e `RejectWithdrawalAction` a recusa. Há uma janela de resgate por oferta, definida pela periodicidade e pela carência.
+
+### Limite por investidor
+
+Existe um teto de valor acumulado por investidor por ano-calendário, que varia conforme a categoria dele (padrão, alta renda ou qualificado). A apuração está em `CalculateInvestorCvmCapAction` e é verificada na confirmação do aporte.
+
+### Assinatura de contratos
+
+Contratos são assinados por um provedor externo, que devolve o resultado por webhook em `POST /webhooks/signature`. O provedor reenvia a chamada até receber um 2xx, e não garante entrega única por evento. Os eventos alimentam `AdvancePlacementOnContractSignedListener` e `CancelPlacementListener`.
+
+## Estrutura
+
+```
+app/
+├── Casts/AsMoney.php              # cast monetário
+├── ValueObjects/Money.php         # value object de dinheiro
+├── Models/Users/                  # investidor
+├── Models/Finance/                # perfil financeiro
+└── Reporting/PositionQueries.php  # consultas das telas de posição
+
+app-modules/
+├── banking/                       # carteiras, movimentações, resgates, rendimento
+├── offers/                        # ofertas, taxas, empresas captadoras
+└── placements/                    # aportes, máquina de estados, limite, contratos
+```
+
+## Dataset de demonstração
+
+`DemoDataSeeder` gera uma base com a forma e o volume de uma operação real: ~900 investidores, 50 ofertas com 18 meses de taxas, ~2.000 aportes distribuídos pelo ciclo de vida, ~1.500 carteiras e o histórico de movimentações que sustenta os saldos. Inclui também ajustes e correções aplicados ao longo do tempo pela operação.
+
+Todas as senhas de investidor são `password`.

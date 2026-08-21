@@ -10,8 +10,14 @@
     "license": "MIT",
     "require": {
         "php": "^8.3",
+        "brick/math": "0.14.8",
+        "brick/money": "0.10.3",
+        "internachi/modular": "*",
         "laravel/framework": "^13.17",
-        "laravel/tinker": "^3.0"
+        "laravel/tinker": "^3.0",
+        "platform/banking": "*",
+        "platform/offers": "*",
+        "platform/placements": "*"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
@@ -58,8 +64,7 @@
             "@php artisan package:discover --ansi"
         ],
         "post-update-cmd": [
-            "@php artisan vendor:publish --tag=laravel-assets --ansi --force",
-            "@php artisan boost:update --ansi"
+            "@php artisan vendor:publish --tag=laravel-assets --ansi --force"
         ],
         "post-root-package-install": [
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
@@ -88,5 +93,14 @@
         }
     },
     "minimum-stability": "stable",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "repositories": [
+        {
+            "type": "path",
+            "url": "app-modules/*",
+            "options": {
+                "symlink": true
+            }
+        }
+    ]
 }

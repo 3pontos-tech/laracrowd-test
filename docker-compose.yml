@@ -1,0 +1,23 @@
+services:
+    db:
+        image: postgres:17-alpine
+        container_name: laracrowd-test-db
+        restart: unless-stopped
+        environment:
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: postgres
+            POSTGRES_DB: laracrowd
+        ports:
+            - "${FORWARD_DB_PORT:-5434}:5432"
+        volumes:
+            - laracrowd-test-db:/var/lib/postgresql/data
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready --quiet --username=postgres --dbname=laracrowd || exit 1"]
+            interval: 10s
+            retries: 5
+            timeout: 5s
+            start_period: 10s
+
+volumes:
+    laracrowd-test-db:
+        name: laracrowd-test-db

@@ -1,0 +1,24 @@
+{
+	"name": "platform/offers",
+	"description": "",
+	"type": "library",
+	"version": "1.0",
+	"license": "proprietary",
+	"require": {},
+	"autoload": {
+		"psr-4": {
+			"Platform\\Offers\\": "src/",
+			"Platform\\Offers\\Tests\\": "tests/",
+			"Platform\\Offers\\Database\\Factories\\": "database/factories/",
+			"Platform\\Offers\\Database\\Seeders\\": "database/seeders/"
+		}
+	},
+	"minimum-stability": "stable",
+	"extra": {
+		"laravel": {
+			"providers": [
+				"Platform\\Offers\\Providers\\OffersServiceProvider"
+			]
+		}
+	}
+}
