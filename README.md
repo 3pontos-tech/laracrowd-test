@@ -1,5 +1,7 @@
 # Investment Platform
 
+> Este repositório existe exclusivamente para a avaliação de um desafio técnico — não é um projeto em produção nem aceita contribuições.
+
 Plataforma de investimentos que conecta empresas em captação a investidores. Suporta duas modalidades de oferta sobre o mesmo núcleo financeiro: participação em investimento coletivo e nota comercial.
 
 ## Stack
