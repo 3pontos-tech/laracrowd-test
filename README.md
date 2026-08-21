@@ -6,7 +6,7 @@ Plataforma de investimentos que conecta empresas em captação a investidores. S
 
 | Camada | Tecnologia |
 | --- | --- |
-| Backend | PHP 8.4, Laravel 13 |
+| Backend | PHP 8.3+, Laravel 13 |
 | Banco de dados | PostgreSQL |
 | Organização | Monólito modular (`internachi/modular`) |
 | Dinheiro | `brick/math` + value object próprio, escala de 8 casas |
@@ -23,10 +23,11 @@ docker compose up -d              # PostgreSQL na porta 5434
 php artisan migrate --seed        # schema + dataset de demonstração
 ```
 
-Rodando os testes:
+Rodando os testes e a análise estática:
 
 ```bash
 ./vendor/bin/pest
+./vendor/bin/phpstan analyse
 ```
 
 > A suíte usa SQLite em memória (`phpunit.xml`), enquanto o ambiente de trabalho usa PostgreSQL.
@@ -51,7 +52,7 @@ Cada etapa é uma classe em `app-modules/placements/src/Actions/StateMachine/`, 
 
 Todo aporte ativo tem uma **carteira** (`Wallet`), que mantém cinco valores: saldo, rendimentos acumulados, rendimentos disponíveis, total investido e total resgatado.
 
-As movimentações financeiras são registradas em partidas dobradas:
+As movimentações financeiras são registradas em um razão estruturado em duas tabelas:
 
 - `ledgers` — agrupa uma operação e carrega o estado dela
 - `ledger_entries` — as pernas de débito e crédito, por carteira

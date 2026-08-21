@@ -1,13 +1,13 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "3pontos-tech/laracrowd-test",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "Núcleo financeiro de uma plataforma de investimentos — base do desafio técnico.",
     "keywords": [
         "laravel",
         "framework"
     ],
-    "license": "MIT",
+    "license": "proprietary",
     "require": {
         "php": "^8.3",
         "brick/math": "0.14.8",
